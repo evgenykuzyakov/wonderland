@@ -1,10 +1,7 @@
 use crate::*;
 
-use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::Vector;
 use near_sdk::json_types::Base64VecU8;
-use near_sdk::near_bindgen;
-use near_sdk::serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 pub const BOARD_WIDTH: u32 = 50;
@@ -107,7 +104,7 @@ impl PixelBoard {
 }
 
 #[near_bindgen]
-impl Place {
+impl Contract {
     pub fn get_lines(&self, lines: Vec<u32>) -> Vec<Base64VecU8> {
         lines
             .into_iter()

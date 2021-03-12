@@ -22,10 +22,10 @@ The cost of drawing a pixel is determined by current `ft_pool` and a fixed coeff
 
 When drawing multiple pixels in one transaction it's should be possible to correctly compute the total price.
 
-`draw_commision_coef` is used to determine which part of the pixel price goes to liquidity providers as a reward (e.g. `1 / 10`)
+`draw_fee_coef` is used to determine which part of the pixel price goes to liquidity providers as a reward (e.g. `1 / 10`)
 
 - `your_ft -= pixel_price` - withdrawing `FT` amount from your account.
-- `lp_reward = draw_commision_coef * pixel_price` will be split proportionally to `L` owners at `your_l / l_pool`
+- `lp_reward = draw_fee_coef * pixel_price` will be split proportionally to `L` owners at `your_l / l_pool`
 - `ft_pool += pixel_price - lp_reward` increasing `FT` pool
 
 ### Add L
@@ -50,7 +50,7 @@ The amount of `FT` you want to spend.
 ### Remove L
 
 Any liquidity provider (except for the App) can remove the liquidity by burning `L` tokens and getting corresponding amount
-of `FT` tokens based on the current `l_price`. There is no commission to remove `L`
+of `FT` tokens based on the current `l_price`. There is no fee to remove `L`
 
 - `l_amount` - the amount of `L` tokens to remove/burn
 - `your_l -= l_amount` - remove `L` tokens from your balance
@@ -79,7 +79,7 @@ Touching account
 - `last_ft_farmed_per_pixel = ft_farmed_per_pixel` - remembering the current value
 - `acc_ft += farmed_ft_amount` - adding farmed balance to the account balance
 
-## App commission
+## App fee
 
 The app owner will not be able to withdraw app liquidity, so the farmers can be certain that the `FT` pool can't be fully drained.
-But the app owner will be able to claim draw commissions earned by the app liquidity.
+But the app owner will be able to claim draw fees earned by the app liquidity.
