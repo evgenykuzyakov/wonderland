@@ -5,14 +5,13 @@ import BN from 'bn.js';
 import * as nearAPI from 'near-api-js'
 import { AlphaPicker, HuePicker, GithubPicker } from 'react-color'
 import Switch from "react-switch"
-import {Weapons} from "./Weapons";
 
 const PixelPrice = new BN("10000000000000000000000");
-const IsMainnet = true; // window.location.hostname === "berryclub.io";
+const IsMainnet = false; // window.location.hostname === "berryclub.io";
 const TestNearConfig = {
   networkId: 'testnet',
   nodeUrl: 'https://rpc.testnet.near.org',
-  contractName: 'dev-1604708520705-2360364',
+  contractName: 'dev-1615590559953-5504799',
   walletUrl: 'https://wallet.testnet.near.org',
 };
 const MainNearConfig = {
@@ -22,16 +21,6 @@ const MainNearConfig = {
   walletUrl: 'https://wallet.near.org',
 };
 const NearConfig = IsMainnet ? MainNearConfig : TestNearConfig;
-
-const Avocado = <span role="img" aria-label="avocado" className="berry">🥑</span>;
-const Banana = <span role="img" aria-label="banana" className="berry">🍌</span>;
-const Cucumber = <span role="img" aria-label="cucumber" className="berry">🥒</span>;
-const Pepper = <span role="img" aria-label="pepper" className="berry">🌶️</span>;
-
-const Berry = {
-  Avocado: 'Avocado',
-  Banana: 'Banana',
-};
 
 const BoardHeight = 50;
 const BoardWidth = 50;
@@ -102,16 +91,14 @@ const decodeLine = (line) => {
   return pixels;
 };
 
-const WeaponsCheat = "idkfa";
-
 class App extends React.Component {
   constructor(props) {
     super(props);
 
     const colors = ["#000000", "#666666", "#aaaaaa", "#FFFFFF", "#F44E3B", "#D33115", "#9F0500", "#FE9200", "#E27300", "#C45100", "#FCDC00", "#FCC400", "#FB9E00", "#DBDF00", "#B0BC00", "#808900", "#A4DD00", "#68BC00", "#194D33", "#68CCCA", "#16A5A5", "#0C797D", "#73D8FF", "#009CE0", "#0062B1", "#AEA1FF", "#7B64FF", "#653294", "#FDA1FF", "#FA28FF", "#AB149E"].map((c) => c.toLowerCase());
-    // const currentColor = parseInt(colors[Math.floor(Math.random() * colors.length)].substring(1), 16);
-    const currentColor = parseInt(colors[0].substring(1), 16);
-    const defaultAlpha = 0.25;
+    const currentColor = parseInt(colors[Math.floor(Math.random() * colors.length)].substring(1), 16);
+    // const currentColor = parseInt(colors[0].substring(1), 16);
+    const defaultAlpha = 1;
 
     this.state = {
       connected: false,
@@ -130,9 +117,8 @@ class App extends React.Component {
       accounts: {},
       highlightedAccountIndex: -1,
       selectedOwnerIndex: false,
-      farmingBanana: false,
-      weaponsOn: false,
-      weaponsCodePosition: 0,
+      showDepositDialog: false,
+      showWithdrawDialog: false,
     };
 
     this._buttonDown = false;
@@ -253,18 +239,6 @@ class App extends React.Component {
     })
 
     document.addEventListener('keyup', (e) => {
-      if (this.state.weaponsCodePosition < WeaponsCheat.length) {
-        if (e.key.toLowerCase() === WeaponsCheat[this.state.weaponsCodePosition]) {
-          this.setState({
-            weaponsCodePosition: this.state.weaponsCodePosition + 1,
-            weaponsOn: this.state.weaponsCodePosition + 1 === WeaponsCheat.length,
-          });
-        } else {
-          this.setState({
-            weaponsCodePosition: 0,
-          });
-        }
-      }
       !e.altKey && this.disablePickColor();
     })
   }
@@ -429,26 +403,20 @@ class App extends React.Component {
       account = {
         accountId,
         accountIndex: -1,
-        avocadoBalance: 25.0,
-        bananaBalance: 0.0,
+        ftBalance: 0.0,
+        lBalance: 0.0,
         numPixels: 0,
-        farmingPreference: Berry.Avocado,
       }
     } else {
       account = {
         accountId: account.account_id,
         accountIndex: account.account_index,
-        avocadoBalance: parseFloat(account.avocado_balance) / this._pixelCost,
-        bananaBalance: parseFloat(account.banana_balance) / this._pixelCost,
+        ftBalance: parseFloat(account.ft_balance) / this._pixelCost,
+        lBalance: parseFloat(account.l_balance) / this._pixelCost,
         numPixels: account.num_pixels,
-        farmingPreference: account.farming_preference,
       }
     }
     account.startTime = new Date().getTime();
-    account.avocadoPixels = (account.farmingPreference === Berry.Avocado) ? (account.numPixels + 1) : 0;
-    account.bananaPixels = (account.farmingPreference === Berry.Banana) ? (account.numPixels) : 0;
-    account.avocadoRewardPerMs = account.avocadoPixels / (24 * 60 * 60 * 1000);
-    account.bananaRewardPerMs = account.bananaPixels / (24 * 60 * 60 * 1000);
     return account;
   }
 
@@ -475,10 +443,10 @@ class App extends React.Component {
 
     this.setState({
       pendingPixels: this._pendingPixels.length + this._queue.length,
-      farmingBanana: account.farmingPreference === Berry.Banana,
       account,
     });
 
+    /*
     this._balanceRefreshTimer = setInterval(() => {
       const t = new Date().getTime() - account.startTime;
       this.setState({
@@ -489,6 +457,7 @@ class App extends React.Component {
         pendingPixels: this._pendingPixels.length + this._queue.length,
       });
     }, 100);
+     */
   }
 
   async _initNear() {
@@ -502,10 +471,24 @@ class App extends React.Component {
 
     this._account = this._walletConnection.account();
     this._contract = new nearAPI.Contract(this._account, NearConfig.contractName, {
-      viewMethods: ['get_account', 'get_account_by_index', 'get_lines', 'get_line_versions', 'get_pixel_cost', 'get_account_balance', 'get_account_num_pixels', 'get_account_id_by_index'],
+      viewMethods: ['get_account', 'get_account_by_index', 'get_lines', 'get_line_versions', 'get_config', 'get_stats'],
       changeMethods: ['draw', 'buy_tokens', 'select_farming_preference'],
     });
-    this._pixelCost = parseFloat(await this._contract.get_pixel_cost());
+    const config = await this._contract.get_config();
+    this.config = {
+      appAccountId: config.app_account_id,
+      ftAccountId: config.ft_account_id,
+      appLiquidity: 1 / parseFloat(config.app_liquidity_denominator),
+      pixelCoef: 1 / parseFloat(config.pixel_coef_denominator),
+      drawFee: 1 / parseFloat(config.draw_fee_denominator),
+    }
+
+    this._ftContract = new nearAPI.Contract(this._account, NearConfig.contractName, {
+      viewMethods: ['ft_balance_of'],
+      changeMethods: ['ft_transfer_call'],
+    });
+
+    this._pixelCost = 1e18;
     if (this._accountId) {
       await this.refreshAccountStats();
     }
@@ -758,6 +741,18 @@ class App extends React.Component {
     await this._contract.buy_tokens({}, new BN("30000000000000"), requiredBalance);
   }
 
+  depositFt() {
+    this.setState({
+      showDepositDialog: true
+    })
+  }
+
+  withdrawFt() {
+    this.setState({
+      showWithdrawDialog: true
+    })
+  }
+
   setHover(accountIndex, v) {
     if (v) {
       this.setState({
@@ -774,31 +769,9 @@ class App extends React.Component {
     }
   }
 
-  async switchBerry(farmingBanana) {
-    this.setState({
-      farmingBanana,
-    })
-    await this._contract.select_farming_preference({
-      berry: farmingBanana ? Berry.Banana : Berry.Avocado,
-    });
-    await this.refreshAccountStats();
-  }
-
-  async renderImg(img, avocadoNeeded) {
-    this.imageData = img;
-    this.setState({
-      weaponsOn: false,
-      weaponsCodePosition: 0,
-      rendering: true,
-      pickingColor: false,
-      avocadoNeeded
-    })
-  }
-
   render() {
-
     const content = !this.state.connected ? (
-        <div>Connecting... <span className="spinner-grow spinner-grow-sm" role="status" aria-hidden="true"></span></div>
+        <div>Connecting... <span className="spinner-grow spinner-grow-sm" role="status" aria-hidden="true" /></div>
     ) : (this.state.signedIn ? (
         <div>
           <div className="float-right">
@@ -812,42 +785,27 @@ class App extends React.Component {
               pendingPixels={this.state.pendingPixels}
               detailed={true}
           />
-          <div>
-            Farming preference:
-            <Switch
-                onChange={(e) => this.switchBerry(e)}
-                checked={this.state.farmingBanana}
-                className="react-switch"
-                height={30}
-                width={70}
-                offColor="#666"
-                onColor="#666"
-                uncheckedIcon={<div className="switch-berry avocado">{Avocado}</div>}
-                checkedIcon={<div className="switch-berry banana">{Banana}</div>}
-            />
-          </div>
           </div>
           <div className="buttons">
             <button
               className="btn btn-primary"
-              onClick={() => this.buyTokens(10)}>Buy <span className="font-weight-bold">25{Avocado}</span> for <span className="font-weight-bold">Ⓝ0.1</span></button>{' '}
+              onClick={() => this.depositFt()}>Deposit FT
+            </button>{' '}
             <button
               className="btn btn-primary"
-              onClick={() => this.buyTokens(40)}>Buy <span className="font-weight-bold">100{Avocado}</span> for <span className="font-weight-bold">Ⓝ0.4</span></button>{' '}
+              onClick={() => this.withdrawFt()}>Withdraw FT
+            </button>{' '}
             <button
               className="btn btn-primary"
-              onClick={() => this.buyTokens(100)}>Buy <span className="font-weight-bold">250{Avocado}</span> for <span className="font-weight-bold">Ⓝ1</span></button>{' '}
+              onClick={() => this.addLiquidity()}>Add Liquidity
+            </button>{' '}
             <button
-              className="btn btn-success"
-              onClick={() => this.buyTokens(500)}>DEAL: Buy <span className="font-weight-bold">1500{Avocado}</span> for <span className="font-weight-bold">Ⓝ5</span></button>
+              className="btn btn-primary"
+              onClick={() => this.removeLiquidity()}>Remove Liquidity
+            </button>{' '}
           </div>
           <div className="color-picker">
             <HuePicker color={ this.state.pickerColor } width="100%" onChange={(c) => this.hueColorChange(c)}/>
-            <AlphaPicker color={ this.state.pickerColor } width="100%" onChange={(c) => this.alphaColorChange(c)}/>
-            <div className={this.state.alpha >= 0.75 ? "display-warning" : "hidden"}>
-              <span role="img" aria-label="warning">⚠️</span>️ Please! Don't destroy art! If you just want to farm {Banana}, just draw with low opacity.
-              <span role="img" aria-label="pray">🙏</span>️
-            </div>
             <GithubPicker className="circle-picker" colors={this.state.gammaColors} color={ this.state.pickerColor } triangle='hide' width="100%" onChangeComplete={(c) => this.changeColor(c)}/>
             <GithubPicker className="circle-picker" colors={this.state.colors} color={ this.state.pickerColor } triangle='hide' width="100%" onChangeComplete={(c) => this.hueColorChange(c)}/>
           </div>
@@ -859,29 +817,10 @@ class App extends React.Component {
               onClick={() => this.requestSignIn()}>Log in with NEAR Wallet</button>
         </div>
     ));
-    const weapons = this.state.weaponsOn ? (
-      <div>
-        <Weapons
-          account={this.state.account}
-          renderIt={(img, avocadoNeeded) => this.renderImg(img, avocadoNeeded)}/>
-      </div>
-    ) : "";
     return (
       <div>
         <div class="header">
-          <h2>{Avocado} Berry Club {Banana}</h2>{' '}
-          <a
-            className="btn btn-outline-none"
-            href="https://farm.berryclub.io">Berry Farm {Cucumber}
-          </a>
-          <a
-            className="btn btn-outline-none"
-            href="https://bananaswap.berryclub.io">[BETA] Banana Swap {Banana}
-          </a>
-          <a
-            className="btn btn-outline-none"
-            href="https://berry.cards">[BETA] Berry Cards {Pepper}
-          </a>
+          <h2>Wonderland</h2>{' '}
           {content}
         </div>
         <div className="container">
@@ -909,34 +848,7 @@ class App extends React.Component {
             </div>
           </div>
         </div>
-        <div className="padded">
-          {this.state.signedIn ? (<div>
-            <iframe title="irc" className="irc" frameBorder="0" src={`https://kiwiirc.com/client/irc.kiwiirc.com/?nick=${this.state.ircAccountId}#berryclub`} ></iframe>
-          </div>) : ""}
-        </div>
-        <div className="padded">
-          <div className="video-container">
-            <iframe title="youtube3" className="youtube" src="https://www.youtube.com/embed/wfTa-Kgw2DM" frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen></iframe>
-          </div>
-        </div>
-        <div className="padded">
-          <div className="video-container">
-            <iframe title="youtube2" className="youtube" src="https://www.youtube.com/embed/PYF6RWd7ZgI" frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen></iframe>
-          </div>
-        </div>
-        <div className="padded">
-          <div className="video-container">
-            <iframe title="youtube" className="youtube" src="https://www.youtube.com/embed/lMSWhCwstLo" frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen></iframe>
-          </div>
-        </div>
-        {weapons}
-        <a className="github-fork-ribbon right-bottom fixed" href="https://github.com/evgenykuzyakov/berryclub" data-ribbon="Fork me on GitHub"
+        <a className="github-fork-ribbon right-bottom fixed" href="https://github.com/evgenykuzyakov/wonderland" data-ribbon="Fork me on GitHub"
            title="Fork me on GitHub">Fork me on GitHub</a>
       </div>
     );
@@ -949,23 +861,10 @@ const Balance = (props) => {
     return "";
   }
   const fraction = props.detailed ? 3: 1;
-  const avacadoBalance = account.avocadoBalance - (props.pendingPixels || 0);
-  const avocadoFarm = (account.avocadoPixels > 0) ? (
-    <span>
-      {'(+'}<span className="font-weight-bold">{account.avocadoPixels}</span>{Avocado}{'/day)'}
-    </span>
-  ) : "";
-  const bananaFarm = (account.bananaPixels > 0) ? (
-    <span>
-      {'(+'}<span className="font-weight-bold">{account.bananaPixels}</span>{Banana}{'/day)'}
-    </span>
-  ) : "";
   return (
     <span className="balances font-small">
-      <span className="font-weight-bold">{avacadoBalance.toFixed(fraction)}</span>{Avocado}{' '}
-      <span className="font-weight-bold">{account.bananaBalance.toFixed(fraction)}</span>{Banana}{' '}
-      {avocadoFarm}
-      {bananaFarm}
+      <span className="font-weight-bold">{account.ftBalance.toFixed(fraction)}</span>{' '}FT{' '}
+      <span className="font-weight-bold">{account.lBalance.toFixed(fraction)}</span>{' '}Liq{' '}
       {
         props.pendingPixels ? <span> ({props.pendingPixels} pending)</span> : ""
       }
@@ -1015,7 +914,7 @@ const Account = (props) => {
     (accountId.slice(0, 6) + '...' + accountId.slice(-6)) :
     accountId;
   return <a className="account"
-            href={`https://wayback.berryclub.io/${accountId}`}>{shortAccountId}</a>
+            href={`https://explorer.near.org/accounts/${accountId}`}>{shortAccountId}</a>
 }
 
 export default App;

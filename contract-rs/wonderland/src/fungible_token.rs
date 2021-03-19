@@ -54,7 +54,6 @@ impl FungibleTokenReceiver for Contract {
 
         match msg {
             FtMessage::Deposit => {
-                self.touch();
                 let mut account: Account = self.get_mut_account(sender_id.into());
                 account.ft_balance += amount.0;
                 log!("Deposited {} FT to @{}", amount.0, account.account_id);

@@ -45,6 +45,7 @@ pub struct Stats {
 
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
+#[borsh_init(touch)]
 pub struct Contract {
     pub account_indices: LookupMap<AccountId, u32>,
     pub accounts: LookupMap<u32, UpgradableAccount>,
@@ -97,7 +98,6 @@ impl Contract {
     }
 
     pub fn draw(&mut self, pixels: Vec<SetPixelRequest>) {
-        self.touch();
         if pixels.is_empty() {
             return;
         }
@@ -131,27 +131,28 @@ impl Contract {
             self.save_account(account);
         }
     }
+
+    pub fn get_config(self) -> ContractConfig {
+        self.config
+    }
+
+    pub fn get_stats(self) -> Stats {
+        self.stats
+    }
 }
 
 impl Contract {
-    pub fn compute_touch_update(&self) -> (FarmRatio, TokenBalance) {
+    pub fn touch(&mut self) {
+        let timestamp = env::block_timestamp();
+        let time_diff = timestamp - self.last_timestamp_touched;
+        self.last_timestamp_touched = timestamp;
         if self.ft_pool <= MIN_FT_POOL {
-            return (self.ft_farmed_per_pixel, self.ft_pool);
+            return;
         }
         // TODO: Magic formula
-        let time_diff = env::block_timestamp() - self.last_timestamp_touched;
         let added_ft_farmed_per_pixel = 0;
         let ft_amount = added_ft_farmed_per_pixel * FarmRatio::from(BOARD_HEIGHT * BOARD_WIDTH);
-        let ft_pool = self.ft_pool - ft_amount;
-        let ft_farmed_per_pixel = self.ft_farmed_per_pixel + added_ft_farmed_per_pixel;
-
-        (ft_farmed_per_pixel, ft_pool)
-    }
-
-    pub fn touch(&mut self) {
-        let (ft_farmed_per_pixel, ft_pool) = self.compute_touch_update();
-        self.ft_farmed_per_pixel = ft_farmed_per_pixel;
-        self.ft_pool = ft_pool;
-        self.last_timestamp_touched = env::block_timestamp();
+        self.ft_farmed_per_pixel += added_ft_farmed_per_pixel;
+        self.ft_pool -= ft_amount;
     }
 }

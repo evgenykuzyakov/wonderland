@@ -49,6 +49,13 @@ h2 {
   }
 }
 
+.btn-danger {
+  border: 2px solid #FF5533;
+  &:hover {
+    background: #7e7;
+  }
+}
+
 .btn-outline-none {
   border: none;
   margin-left: 0.5em;

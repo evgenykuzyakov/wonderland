@@ -93,7 +93,6 @@ impl Contract {
     }
 
     pub fn register_account(&mut self) {
-        self.touch();
         let account = self.get_mut_account(env::predecessor_account_id());
         self.save_account(account);
     }
@@ -101,7 +100,6 @@ impl Contract {
     #[payable]
     pub fn withdraw_ft(&mut self, amount: Option<U128>) -> Promise {
         assert_one_yocto();
-        self.touch();
         let mut account = self.get_mut_account(env::predecessor_account_id());
         let amount = amount.map(|a| a.into()).unwrap_or(account.ft_balance);
         if account.ft_balance < amount {
@@ -118,19 +116,17 @@ impl Contract {
     }
 
     pub fn get_account_by_index(&self, account_index: AccountIndex) -> Option<HumanAccount> {
-        let (ft_farmed_per_pixel, _) = self.compute_touch_update();
         self.get_internal_account_by_index(account_index)
             .map(|mut account| {
-                account.touch(ft_farmed_per_pixel);
+                account.touch(self.ft_farmed_per_pixel);
                 account.into()
             })
     }
 
     pub fn get_account(&self, account_id: ValidAccountId) -> Option<HumanAccount> {
-        let (ft_farmed_per_pixel, _) = self.compute_touch_update();
         self.get_internal_account_by_id(account_id.as_ref())
             .map(|mut account| {
-                account.touch(ft_farmed_per_pixel);
+                account.touch(self.ft_farmed_per_pixel);
                 account.into()
             })
     }
